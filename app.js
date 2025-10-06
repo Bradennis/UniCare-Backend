@@ -24,6 +24,7 @@ const counsellorRouter = require("./routes/counsellor.js");
 const authRouter = require("./routes/auth.js");
 const allowedOrigins = [
   "https://unicare-admin.vercel.app",
+  "https://unicare-app.vercel.app/",
   "http://localhost:5174",
   "http://localhost:5173",
 ];

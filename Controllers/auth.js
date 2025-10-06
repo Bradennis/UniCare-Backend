@@ -9,27 +9,33 @@ const register = asyncWrapper(async (req, res) => {
   const { username, password, email, student_id, status } = req.body;
 
   if (!username || !password || !email || !student_id) {
-    throw new BadRequest(`please fill all the fields`);
+    throw new BadRequest("Please fill all the fields");
   }
 
   const findStudent = await studentSchema.findOne({ id: student_id });
 
   if (!findStudent) {
     throw new Unauthenticated(
-      "only students with valid credentials can access this service"
+      "Only students with valid credentials can access this service"
     );
   }
 
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   const user = await Users.create({
     username,
-    password,
+    password: hashedPassword,
     email,
     student_id,
     role: status,
   });
 
   const token = user.createJwt();
-  res.cookie("token", token, { httpOnly: true, sameSite: "strict" });
+  res.cookie("token", token, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   res.status(200).json({
     username: user.username,
@@ -42,24 +48,27 @@ const login = asyncWrapper(async (req, res) => {
   const { password, student_id } = req.body;
 
   if (!password || !student_id) {
-    throw new BadRequest(`please fill all the fields`);
+    throw new BadRequest("Please fill all the fields");
   }
 
   const user = await Users.findOne({ student_id });
 
   if (!user) {
-    throw new Unauthenticated("invalid credentials");
+    throw new Unauthenticated("Invalid credentials");
   }
 
   const comparePassword = await bcrypt.compare(password, user.password);
-  console.log(comparePassword);
 
   if (!comparePassword) {
-    throw new Unauthenticated("invalid credentials");
+    throw new Unauthenticated("Invalid credentials");
   }
 
   const token = user.createJwt();
-  res.cookie("token", token, { httpOnly: true });
+  res.cookie("token", token, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   res.status(200).json({
     username: user.username,
@@ -74,7 +83,7 @@ const logOut = asyncWrapper(async (req, res) => {
   const { _id } = req.body;
 
   try {
-    const user = await Users.findByIdAndUpdate(
+    await Users.findByIdAndUpdate(
       _id,
       {
         online: false,
@@ -86,26 +95,29 @@ const logOut = asyncWrapper(async (req, res) => {
   } catch (err) {
     console.error("Error updating last seen status:", err);
   }
-  return res.send({ msg: "logged out succesful" });
+
+  res.status(200).json({ msg: "Logged out successfully" });
 });
 
 const fetchToken = asyncWrapper(async (req, res) => {
   const token = req.cookies.token;
 
   if (!token) {
-    throw new Unauthenticated("authentication failed");
+    throw new Unauthenticated("Authentication failed");
   }
 
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   const user = await Users.findOne({ username: decoded.username });
 
   if (!user) {
-    throw new Unauthenticated("authentication failed");
+    throw new Unauthenticated("Authentication failed");
   }
+
   res.status(200).json({ token });
 });
 
 const testing = asyncWrapper(async (req, res) => {
-  res.status(200).send("hello world");
+  res.status(200).send("Hello world");
 });
+
 module.exports = { register, login, fetchToken, logOut, testing };

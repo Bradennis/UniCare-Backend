@@ -6,18 +6,25 @@ const authenticationMiddleWare = (req, res, next) => {
     const token = req.cookies.token;
 
     if (!token) {
-      throw new Unauthenticated("authentication failed");
+      throw new Unauthenticated("Authentication failed");
     }
 
-    const { userId, username, id } = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = { id, username, userId };
+    req.user = {
+      id: decoded.id,
+      username: decoded.username,
+      userId: decoded.userId,
+    };
+
     next();
   } catch (error) {
-    throw new Unauthenticated("authentication error");
+    throw new Unauthenticated("Authentication error");
   }
 };
+
 const getRoute = (req, res) => {
   res.send("Hello from auth route.");
-}
+};
+
 module.exports = authenticationMiddleWare;
